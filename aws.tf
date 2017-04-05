@@ -10,6 +10,7 @@ data "aws_availability_zones" "available" {}
 
 #Provision resources
 
+#Create the VPC
 resource "aws_vpc" "test" {
   cidr_block = "${var.network_address_space}"
 
@@ -18,6 +19,7 @@ resource "aws_vpc" "test" {
   }
 }
 
+#Create an internet gateway for egress
 resource "aws_internet_gateway" "test" {
   vpc_id = "${aws_vpc.test.id}"
 
@@ -26,6 +28,7 @@ resource "aws_internet_gateway" "test" {
   }
 }
 
+#Establish a subnet in the first availability zone
 resource "aws_subnet" "test1" {
   cidr_block              = "${var.subnet1_address_space}"
   vpc_id                  = "${aws_vpc.test.id}"
@@ -37,6 +40,7 @@ resource "aws_subnet" "test1" {
   }
 }
 
+#Establish a subnet in the second availability zone
 resource "aws_subnet" "test2" {
   cidr_block              = "${var.subnet2_address_space}"
   vpc_id                  = "${aws_vpc.test.id}"
@@ -48,6 +52,7 @@ resource "aws_subnet" "test2" {
   }
 }
 
+#Create a route table to define routing for the subnets
 resource "aws_route_table" "test" {
   vpc_id = "${aws_vpc.test.id}"
 
@@ -56,12 +61,14 @@ resource "aws_route_table" "test" {
   }
 }
 
+#Add a default route for internet traffic
 resource "aws_route" "internet_access" {
   route_table_id         = "${aws_route_table.test.id}"
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = "${aws_internet_gateway.test.id}"
 }
 
+#Associate the subnets with the route table
 resource "aws_route_table_association" "test1" {
   subnet_id      = "${aws_subnet.test1.id}"
   route_table_id = "${aws_route_table.test.id}"
@@ -72,6 +79,7 @@ resource "aws_route_table_association" "test2" {
   route_table_id = "${aws_route_table.test.id}"
 }
 
+#Create an elastice load balancer security group allowing inbound HTTP
 resource "aws_security_group" "elb" {
   name        = "test_elb"
   description = "used for Pluralsight demo"
@@ -85,7 +93,7 @@ resource "aws_security_group" "elb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  #allow all outbound
+  #Allow all outbound
   egress {
     from_port   = 0
     to_port     = 0
@@ -98,13 +106,13 @@ resource "aws_security_group" "elb" {
   }
 }
 
-# Default security group 
+#Create a default security group to allow remote configuration of VM
 resource "aws_security_group" "default" {
   name        = "test_sg"
   description = "Used for Pluralsight demo"
   vpc_id      = "${aws_vpc.test.id}"
 
-  # SSH access from anywhere
+  #Allow SSH access from anywhere (this can be restricted to local IP Address)
   ingress {
     from_port   = 22
     to_port     = 22
@@ -112,7 +120,7 @@ resource "aws_security_group" "default" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # HTTP access from the VPC
+  #Allow HTTP access from the VPC
   ingress {
     from_port   = 80
     to_port     = 80
@@ -120,7 +128,7 @@ resource "aws_security_group" "default" {
     cidr_blocks = ["${var.network_address_space}"]
   }
 
-  # outbound internet access
+  #Allow outbound internet access
   egress {
     from_port   = 0
     to_port     = 0
@@ -133,6 +141,7 @@ resource "aws_security_group" "default" {
   }
 }
 
+#Create an elastic load balancer to front-end the web server
 resource "aws_elb" "web" {
   name = "test-elb"
 
@@ -140,6 +149,7 @@ resource "aws_elb" "web" {
   security_groups = ["${aws_security_group.elb.id}"]
   instances       = ["${aws_instance.web.id}"]
 
+  #Listen on port 80 for HTTP traffic
   listener {
     instance_port     = 80
     instance_protocol = "http"
@@ -152,6 +162,7 @@ resource "aws_elb" "web" {
   }
 }
 
+##Create an EC2 instance for the Web server
 resource "aws_instance" "web" {
   ami             = "${lookup(var.amis, var.aws_region)}"
   instance_type   = "t2.micro"
@@ -173,6 +184,24 @@ resource "aws_instance" "web" {
 
   tags {
     Name = "${var.naming_prefix}-web1"
+  }
+}
+
+#Create an EC2 instance for the Database server
+resource "aws_instance" "db" {
+  ami             = "${lookup(var.amis, var.aws_region)}"
+  instance_type   = "t2.micro"
+  subnet_id       = "${aws_subnet.test1.id}"
+  key_name        = "${var.key_name}"
+  security_groups = ["${aws_security_group.default.id}"]
+
+  connection {
+    user        = "ec2-user"
+    private_key = "${file(var.private_key_path)}"
+  }
+
+  tags {
+    Name = "${var.naming_prefix}-db1"
   }
 }
 
