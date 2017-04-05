@@ -1,16 +1,19 @@
-#Define a provider
+#Define a provider for AWS
 provider "aws" {
   access_key = "${var.aws_access_key}"
   secret_key = "${var.aws_secret_key}"
   region     = "${var.aws_region}"
 }
 
+#Collect data for AZs
 data "aws_availability_zones" "available" {}
+
+#Provision resources
 
 resource "aws_vpc" "test" {
   cidr_block = "${var.network_address_space}"
 
-  tags = {
+  tags {
     Name = "${var.naming_prefix}-vpc"
   }
 }
@@ -18,29 +21,29 @@ resource "aws_vpc" "test" {
 resource "aws_internet_gateway" "test" {
   vpc_id = "${aws_vpc.test.id}"
 
-  tags = {
+  tags {
     Name = "${var.naming_prefix}-ig"
   }
 }
 
 resource "aws_subnet" "test1" {
-  cidr_block        = "${var.subnet1_address_space}"
-  vpc_id            = "${aws_vpc.test.id}"
-  availability_zone = "${data.aws_availability_zones.available.names[0]}"
+  cidr_block              = "${var.subnet1_address_space}"
+  vpc_id                  = "${aws_vpc.test.id}"
+  availability_zone       = "${data.aws_availability_zones.available.names[0]}"
   map_public_ip_on_launch = true
 
-  tags = {
+  tags {
     Name = "${var.naming_prefix}-subnet1"
   }
 }
 
 resource "aws_subnet" "test2" {
-  cidr_block        = "${var.subnet2_address_space}"
-  vpc_id            = "${aws_vpc.test.id}"
-  availability_zone = "${data.aws_availability_zones.available.names[1]}"
+  cidr_block              = "${var.subnet2_address_space}"
+  vpc_id                  = "${aws_vpc.test.id}"
+  availability_zone       = "${data.aws_availability_zones.available.names[1]}"
   map_public_ip_on_launch = true
 
-  tags = {
+  tags {
     Name = "${var.naming_prefix}-subnet2"
   }
 }
@@ -48,7 +51,7 @@ resource "aws_subnet" "test2" {
 resource "aws_route_table" "test" {
   vpc_id = "${aws_vpc.test.id}"
 
-  tags = {
+  tags {
     Name = "${var.naming_prefix}-drt"
   }
 }
@@ -89,8 +92,8 @@ resource "aws_security_group" "elb" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
-  tags = {
+
+  tags {
     Name = "${var.naming_prefix}-elbsg"
   }
 }
@@ -125,10 +128,9 @@ resource "aws_security_group" "default" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
+  tags {
     Name = "${var.naming_prefix}-dsg"
   }
-
 }
 
 resource "aws_elb" "web" {
@@ -145,31 +147,31 @@ resource "aws_elb" "web" {
     lb_protocol       = "http"
   }
 
-  tags = {
+  tags {
     Name = "${var.naming_prefix}-elb"
   }
 }
 
 resource "aws_instance" "web" {
-  ami           = "${lookup(var.amis, var.aws_region)}"
-  instance_type = "t2.micro"
-  subnet_id     = "${aws_subnet.test1.id}"
-  key_name      = "${var.key_name}"
+  ami             = "${lookup(var.amis, var.aws_region)}"
+  instance_type   = "t2.micro"
+  subnet_id       = "${aws_subnet.test1.id}"
+  key_name        = "${var.key_name}"
   security_groups = ["${aws_security_group.default.id}"]
 
   connection {
-      user = "ec2-user"
-      private_key = "${file(var.private_key_path)}"
-    }
+    user        = "ec2-user"
+    private_key = "${file(var.private_key_path)}"
+  }
 
   provisioner "remote-exec" {
     inline = [
       "sudo yum install nginx -y",
-      "sudo service nginx start"
+      "sudo service nginx start",
     ]
   }
 
-  tags = {
+  tags {
     Name = "${var.naming_prefix}-web1"
   }
 }
