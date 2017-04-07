@@ -1,3 +1,6 @@
+##################################################################################
+# PROVIDERS
+##################################################################################
 #Define a provider for AWS
 provider "aws" {
   access_key = "${var.aws_access_key}"
@@ -8,8 +11,11 @@ provider "aws" {
 #Collect data for AZs
 data "aws_availability_zones" "available" {}
 
-#Provision resources
+##################################################################################
+# RESOURCES
+##################################################################################
 
+########################## NETWORK ###############################################
 #Create the VPC
 resource "aws_vpc" "test" {
   cidr_block = "${var.network_address_space}"
@@ -141,6 +147,8 @@ resource "aws_security_group" "default" {
   }
 }
 
+########################## ELB ###################################################
+
 #Create an elastic load balancer to front-end the web server
 resource "aws_elb" "web" {
   name = "test-elb"
@@ -162,10 +170,12 @@ resource "aws_elb" "web" {
   }
 }
 
+########################## INSTANCES #############################################
+
 ##Create an EC2 instance for the Web server
 resource "aws_instance" "web" {
   ami             = "${lookup(var.amis, var.aws_region)}"
-  instance_type   = "t2.micro"
+  instance_type   = "t2.small"
   subnet_id       = "${aws_subnet.test1.id}"
   key_name        = "${var.key_name}"
   security_groups = ["${aws_security_group.default.id}"]
@@ -204,6 +214,10 @@ resource "aws_instance" "db" {
     Name = "${var.naming_prefix}-db1"
   }
 }
+
+##################################################################################
+# OUTPUTS
+##################################################################################
 
 output "aws_elb_dns" {
   value = "${aws_elb.web.dns_name}"
