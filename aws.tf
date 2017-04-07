@@ -87,7 +87,7 @@ resource "aws_route_table_association" "test2" {
 
 #Create an elastice load balancer security group allowing inbound HTTP
 resource "aws_security_group" "elb" {
-  name        = "test_elb"
+  name        = "test-elb"
   description = "used for Pluralsight demo"
   vpc_id      = "${aws_vpc.test.id}"
 
@@ -113,8 +113,8 @@ resource "aws_security_group" "elb" {
 }
 
 #Create a default security group to allow remote configuration of VM
-resource "aws_security_group" "default" {
-  name        = "test_sg"
+resource "aws_security_group" "instance" {
+  name        = "test-sg"
   description = "Used for Pluralsight demo"
   vpc_id      = "${aws_vpc.test.id}"
 
@@ -178,7 +178,7 @@ resource "aws_instance" "web" {
   instance_type   = "t2.small"
   subnet_id       = "${aws_subnet.test1.id}"
   key_name        = "${var.key_name}"
-  security_groups = ["${aws_security_group.default.id}"]
+  security_groups = ["${aws_security_group.instance.id}"]
 
   connection {
     user        = "ec2-user"
@@ -203,7 +203,7 @@ resource "aws_instance" "db" {
   instance_type   = "t2.micro"
   subnet_id       = "${aws_subnet.test1.id}"
   key_name        = "${var.key_name}"
-  security_groups = ["${aws_security_group.default.id}"]
+  security_groups = ["${aws_security_group.instance.id}"]
 
   connection {
     user        = "ec2-user"
