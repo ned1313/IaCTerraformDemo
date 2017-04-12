@@ -200,7 +200,7 @@ resource "aws_instance" "web" {
 #Create an EC2 instance for the Database server
 resource "aws_instance" "db" {
   ami             = "${lookup(var.amis, var.aws_region)}"
-  instance_type   = "t2.micro"
+  instance_type   = "t2.small"
   subnet_id       = "${aws_subnet.test1.id}"
   key_name        = "${var.key_name}"
   security_groups = ["${aws_security_group.instance.id}"]
