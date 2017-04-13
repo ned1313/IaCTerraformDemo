@@ -175,10 +175,10 @@ resource "aws_elb" "web" {
 ##Create an EC2 instance for the Web server
 resource "aws_instance" "web" {
   ami             = "${lookup(var.amis, var.aws_region)}"
-  instance_type   = "t2.small"
+  instance_type   = "t2.medium"
   subnet_id       = "${aws_subnet.test1.id}"
   key_name        = "${var.key_name}"
-  security_groups = ["${aws_security_group.instance.id}"]
+  vpc_security_group_ids = ["${aws_security_group.instance.id}"]
 
   connection {
     user        = "ec2-user"
@@ -203,7 +203,7 @@ resource "aws_instance" "db" {
   instance_type   = "t2.small"
   subnet_id       = "${aws_subnet.test1.id}"
   key_name        = "${var.key_name}"
-  security_groups = ["${aws_security_group.instance.id}"]
+  vpc_security_group_ids = ["${aws_security_group.instance.id}"]
 
   connection {
     user        = "ec2-user"
